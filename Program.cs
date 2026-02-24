@@ -34,8 +34,9 @@ namespace StudentManagementSystem
                 Console.WriteLine("5. Search for a Student");
                 Console.WriteLine("6. Delete a Student");
                 Console.WriteLine("7. Delete a Course");
-                Console.WriteLine("8. Exit");
-                Console.Write("\nPlease enter your choice (1-8): ");
+                Console.WriteLine("8. Search Courses by Instructor / Credits");
+                Console.WriteLine("9. Exit");
+                Console.Write("\nPlease enter your choice (1-9): ");
 
                 string choice = Console.ReadLine();
                 Console.WriteLine(); 
@@ -44,7 +45,11 @@ namespace StudentManagementSystem
                 {
                     case "1":
                         Console.Write("Enter Student ID: ");
-                        int id = int.Parse(Console.ReadLine());
+                        if (!int.TryParse(Console.ReadLine(), out int id))
+                        {
+                            Console.WriteLine(" Error: Student ID must be a valid integer.");
+                            continue;
+                        }
                         
                         Console.Write("Enter Student Name: ");
                         string name = Console.ReadLine();
@@ -59,9 +64,16 @@ namespace StudentManagementSystem
                         }
                         
                         var newStudent = new Student(id, name, email, DateTime.Now);
-                        await studentService.AddStudentAsync(newStudent);
-                        
-                        Console.WriteLine("Student added successfully!");
+
+                        try
+                        {
+                            await studentService.AddStudentAsync(newStudent);
+                            Console.WriteLine("Student added successfully!");
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($" Error: {e.Message}");
+                        }
                         break;
 
                     case "2":
@@ -83,24 +95,46 @@ namespace StudentManagementSystem
 
                     case "3":
                         Console.Write("Enter Student ID: ");
-                        int gpaId = int.Parse(Console.ReadLine());
+                        if (!int.TryParse(Console.ReadLine(), out int gpaId))
+                        {
+                            Console.WriteLine(" Error: Student ID must be a valid integer.");
+                            continue;
+                        }
                         
-                        double gpa = await studentService.CalculateGpaAsync(gpaId);
-                        Console.WriteLine($"The GPA for student {gpaId} is: {gpa:F2}");
+                        try
+                        {
+                            double gpa = await studentService.CalculateGpaAsync(gpaId);
+                            Console.WriteLine($"The GPA for student {gpaId} is: {gpa:F2}");
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine($" Error: {e.Message}");
+                        }
                         break;
 
                     case "4":
                         Console.Write("Enter Student ID: ");
-                        int enrollId = int.Parse(Console.ReadLine());
+                        if (!int.TryParse(Console.ReadLine(), out int enrollId))
+                        {
+                            Console.WriteLine(" Error: Student ID must be a valid integer.");
+                            continue;
+                        }
                         
                         Console.Write("Enter Course Code (e.g., CS101, MATH200): ");
                         string enrollCourseCode = Console.ReadLine();
 
+                        Console.Write("Enter Grade (0.0 - 10.0): ");
+                        if (!double.TryParse(Console.ReadLine(), out double grade) || grade < 0.0 || grade > 10.0)
+                        {
+                            Console.WriteLine(" Error: Grade must be a number between 0.0 and 10.0.");
+                            continue;
+                        }
+
                         try 
                         {
                             await studentService.EnrollStudentAsync(enrollId, enrollCourseCode);
-                            await studentService.AssignGradeAsync(enrollId, enrollCourseCode, 4.0); 
-                            Console.WriteLine($" Successfully enrolled student {enrollId} in {enrollCourseCode}!");
+                            await studentService.AssignGradeAsync(enrollId, enrollCourseCode, grade);
+                            Console.WriteLine($" Successfully enrolled student {enrollId} in {enrollCourseCode} with grade {grade:F2}!");
                         }
                         catch (Exception e)
                         {
@@ -130,7 +164,11 @@ namespace StudentManagementSystem
 
                     case "6":
                         Console.Write("Enter Student ID to delete: ");
-                        int deleteId = int.Parse(Console.ReadLine());
+                        if (!int.TryParse(Console.ReadLine(), out int deleteId))
+                        {
+                            Console.WriteLine(" Error: Student ID must be a valid integer.");
+                            continue;
+                        }
 
                         try
                         {
@@ -162,12 +200,47 @@ namespace StudentManagementSystem
                         break;
 
                     case "8":
+                        Console.Write("Enter Instructor Name to search (or press Enter to skip): ");
+                        string instrName = Console.ReadLine();
+                        if (string.IsNullOrWhiteSpace(instrName)) instrName = null;
+
+                        Console.Write("Enter Credit count to search (or press Enter to skip): ");
+                        string credInput = Console.ReadLine();
+                        int? creditFilter = null;
+                        if (!string.IsNullOrWhiteSpace(credInput))
+                        {
+                            if (int.TryParse(credInput, out int parsedCredits))
+                                creditFilter = parsedCredits;
+                            else
+                            {
+                                Console.WriteLine(" Error: Credit count must be a valid integer.");
+                                continue;
+                            }
+                        }
+
+                        var courseResults = await courseService.SearchCoursesAsync(instrName, creditFilter);
+
+                        Console.WriteLine("--- Course Search Results ---");
+                        if (courseResults.Any())
+                        {
+                            foreach (var course in courseResults)
+                            {
+                                Console.WriteLine($"[{course.Code}] {course.Name} | Credits: {course.Credits} | Instructor: {course.Instructor}");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("No courses found matching that search.");
+                        }
+                        break;
+
+                    case "9":
                         keepRunning = false;
                         Console.WriteLine("Exiting the system. Goodbye!");
                         break;
 
                     default:
-                        Console.WriteLine("Invalid choice. Please enter a number between 1 and 8.");
+                        Console.WriteLine("Invalid choice. Please enter a number between 1 and 9.");
                         break;
                 }
             }

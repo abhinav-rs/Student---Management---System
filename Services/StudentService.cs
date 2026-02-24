@@ -20,6 +20,9 @@ namespace StudentManagementSystem.Services
 
         public async Task AddStudentAsync(Student student)
         {
+            var existing = await _studentRepo.GetByIdAsync(student.Id);
+            if (existing != null) throw new Exception($"A student with ID {student.Id} already exists.");
+
             await _studentRepo.AddAsync(student);
         }
 
@@ -80,7 +83,8 @@ namespace StudentManagementSystem.Services
         public async Task<double> CalculateGpaAsync(int studentId)
         {
             var student = await _studentRepo.GetByIdAsync(studentId);
-            if (student == null || !student.Enrollments.Any()) return 0.0; 
+            if (student == null) throw new Exception($"Student with ID {studentId} not found.");
+            if (!student.Enrollments.Any()) return 0.0;
 
             double totalQualityPoints = 0;
             int totalCredits = 0;
